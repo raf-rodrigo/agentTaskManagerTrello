@@ -1,0 +1,3 @@
+venv/
+agentTaskManager/.env
+__pycache__/
