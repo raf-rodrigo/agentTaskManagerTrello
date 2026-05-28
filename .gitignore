@@ -1,3 +1,5 @@
 venv/
 agentTaskManager/.env
 __pycache__/
+.adk/
+*.db
