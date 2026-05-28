@@ -1,25 +1,13 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
-
-from agentTaskManager.agent import root_agent
+from fastapi import FastAPI, Request
+from fastapi.templating import Jinja2Templates
 
 app = FastAPI()
 
-
-class ChatRequest(BaseModel):
-    mensagem: str
-
+templates = Jinja2Templates(directory="agentTaskManager/templates")
 
 @app.get("/")
-def home():
-    return {"status": "online"}
-
-
-@app.post("/chat")
-def chat(data: ChatRequest):
-
-    resposta = root_agent.run(data.mensagem)
-
-    return {
-        "resposta": str(resposta)
-    }
+def home(request: Request):
+    return templates.TemplateResponse(
+        "index.html",
+        {"request": request}
+    )
