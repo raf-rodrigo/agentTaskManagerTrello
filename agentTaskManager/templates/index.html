@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Agent Task Manager Trello</title>
+</head>
+<body>
+    <h2>Agent Task Manager Trello</h2>
+
+    <input id="mensagem" type="text" placeholder="Digite sua mensagem" style="width: 400px;">
+    <button onclick="enviar()">Enviar</button>
+
+    <pre id="resposta"></pre>
+
+    <script>
+        async function enviar() {
+            const mensagem = document.getElementById("mensagem").value;
+
+            const response = await fetch("/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    mensagem: mensagem
+                })
+            });
+
+            const data = await response.json();
+
+            document.getElementById("resposta").innerText =
+                JSON.stringify(data, null, 2);
+        }
+    </script>
+</body>
+</html>
