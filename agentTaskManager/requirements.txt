@@ -1,3 +1,7 @@
+google-adk
 py-trello
+python-dotenv
+fastapi
+uvicorn
+pydantic
 datetime
-dotenv
