@@ -2,35 +2,585 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agent Task Manager Trello</title>
+    <style>
+        :root {
+            --bg: #0b1020;
+            --panel: rgba(15, 23, 42, 0.86);
+            --panel-strong: #111827;
+            --panel-soft: rgba(30, 41, 59, 0.72);
+            --border: rgba(148, 163, 184, 0.18);
+            --text: #e5eefb;
+            --muted: #9aa8c1;
+            --accent: #7dd3fc;
+            --accent-strong: #38bdf8;
+            --user: #2563eb;
+            --assistant: #172036;
+            --shadow: 0 24px 80px rgba(2, 6, 23, 0.45);
+            --radius-xl: 28px;
+            --radius-lg: 20px;
+            --radius-md: 16px;
+            --radius-sm: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            min-height: 100%;
+            background:
+                radial-gradient(circle at top left, rgba(56, 189, 248, 0.22), transparent 28%),
+                radial-gradient(circle at bottom right, rgba(37, 99, 235, 0.2), transparent 30%),
+                linear-gradient(180deg, #050816 0%, #0b1020 100%);
+            color: var(--text);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+        }
+
+        .shell {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 320px minmax(0, 1fr);
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .sidebar,
+        .chat-panel {
+            background: var(--panel);
+            backdrop-filter: blur(22px);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+
+        .sidebar {
+            border-radius: var(--radius-xl);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-mark {
+            width: 46px;
+            height: 46px;
+            border-radius: 16px;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, var(--accent), var(--user));
+            color: white;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            box-shadow: 0 18px 40px rgba(37, 99, 235, 0.35);
+        }
+
+        .brand h1,
+        .panel-title,
+        .section-title {
+            margin: 0;
+        }
+
+        .brand h1 {
+            font-size: 1.05rem;
+            line-height: 1.2;
+        }
+
+        .brand p,
+        .muted,
+        .section-copy,
+        .agent-description,
+        .status-pill,
+        .quick-action,
+        .assistant-meta {
+            color: var(--muted);
+        }
+
+        .brand p {
+            margin: 4px 0 0;
+            font-size: 0.92rem;
+        }
+
+        .agent-card {
+            padding: 18px;
+            border-radius: var(--radius-lg);
+            background: var(--panel-soft);
+            border: 1px solid var(--border);
+        }
+
+        .agent-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            background: rgba(125, 211, 252, 0.12);
+            border: 1px solid rgba(125, 211, 252, 0.18);
+            white-space: nowrap;
+        }
+
+        .status-pill::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: #22c55e;
+            box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.18);
+        }
+
+        .agent-name {
+            margin: 0;
+            font-size: 1.05rem;
+        }
+
+        .agent-description {
+            margin: 12px 0 0;
+            font-size: 0.94rem;
+            line-height: 1.6;
+        }
+
+        .sidebar-section {
+            display: grid;
+            gap: 12px;
+        }
+
+        .section-title {
+            font-size: 0.82rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #b7c5dd;
+        }
+
+        .quick-actions {
+            display: grid;
+            gap: 10px;
+        }
+
+        .quick-action {
+            width: 100%;
+            text-align: left;
+            border: 1px solid var(--border);
+            background: rgba(15, 23, 42, 0.58);
+            color: var(--text);
+            padding: 12px 14px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+        }
+
+        .quick-action:hover {
+            transform: translateY(-1px);
+            border-color: rgba(125, 211, 252, 0.45);
+            background: rgba(30, 41, 59, 0.86);
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding-top: 18px;
+            border-top: 1px solid var(--border);
+            display: grid;
+            gap: 8px;
+        }
+
+        .chat-panel {
+            border-radius: var(--radius-xl);
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr) auto;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            padding: 24px 28px 18px;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(180deg, rgba(17, 24, 39, 0.9), rgba(17, 24, 39, 0.55));
+        }
+
+        .panel-title {
+            font-size: 1.2rem;
+            margin-bottom: 6px;
+        }
+
+        .panel-copy {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .chat-log {
+            padding: 22px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            background:
+                linear-gradient(180deg, rgba(11, 16, 32, 0.12), rgba(11, 16, 32, 0.32)),
+                radial-gradient(circle at top, rgba(56, 189, 248, 0.06), transparent 25%);
+        }
+
+        .message {
+            max-width: min(760px, 92%);
+            padding: 16px 18px;
+            border-radius: 20px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            border: 1px solid transparent;
+            animation: fadeUp 0.22s ease;
+        }
+
+        .message.user {
+            margin-left: auto;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(59, 130, 246, 0.78));
+            border-top-right-radius: 10px;
+            box-shadow: 0 20px 40px rgba(37, 99, 235, 0.22);
+        }
+
+        .message.assistant {
+            background: rgba(15, 23, 42, 0.9);
+            border-color: var(--border);
+            border-top-left-radius: 10px;
+        }
+
+        .message.system {
+            align-self: center;
+            background: rgba(125, 211, 252, 0.08);
+            border-color: rgba(125, 211, 252, 0.18);
+            color: #c7e7ff;
+            text-align: center;
+            font-size: 0.94rem;
+        }
+
+        .assistant-meta {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.8rem;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+
+        .composer {
+            padding: 18px 22px 22px;
+            border-top: 1px solid var(--border);
+            background: rgba(2, 6, 23, 0.32);
+        }
+
+        .composer-inner {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: end;
+            padding: 14px;
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            background: rgba(15, 23, 42, 0.78);
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 72px;
+            resize: none;
+            border: 0;
+            outline: none;
+            background: transparent;
+            color: var(--text);
+            font: inherit;
+            line-height: 1.5;
+            padding: 6px 4px;
+        }
+
+        textarea::placeholder {
+            color: #6b7b97;
+        }
+
+        .send-button {
+            border: 0;
+            border-radius: 16px;
+            padding: 14px 18px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+            color: #04111f;
+            font-weight: 700;
+            cursor: pointer;
+            min-width: 116px;
+            transition: transform 0.16s ease, filter 0.16s ease, opacity 0.16s ease;
+        }
+
+        .send-button:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.04);
+        }
+
+        .send-button:disabled {
+            cursor: wait;
+            opacity: 0.68;
+        }
+
+        .helper-row {
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            color: var(--muted);
+            font-size: 0.82rem;
+        }
+
+        .typing {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #b7c5dd;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 999px;
+            background: #b7c5dd;
+            animation: pulse 1.2s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.14s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.28s;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 80%, 100% {
+                transform: translateY(0);
+                opacity: 0.4;
+            }
+
+            40% {
+                transform: translateY(-4px);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .shell {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                order: 2;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .shell {
+                padding: 12px;
+                gap: 12px;
+            }
+
+            .sidebar,
+            .chat-panel {
+                border-radius: 22px;
+            }
+
+            .chat-header,
+            .composer,
+            .chat-log,
+            .sidebar {
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+
+            .composer-inner {
+                grid-template-columns: 1fr;
+            }
+
+            .send-button {
+                width: 100%;
+            }
+
+            .message {
+                max-width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h2>Agent Task Manager Trello</h2>
+    <main class="shell">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-mark">ADK</div>
+                <div>
+                    <h1>Agent Task Manager</h1>
+                    <p>Interface simples para conversar com o agente principal.</p>
+                </div>
+            </div>
 
-    <input id="mensagem" type="text" placeholder="Digite sua mensagem" style="width: 400px;">
-    <button onclick="enviar()">Enviar</button>
+            <section class="agent-card">
+                <div class="agent-card-header">
+                    <div>
+                        <p class="section-title">Agente ativo</p>
+                        <h2 class="agent-name">{{ agent_name }}</h2>
+                    </div>
+                    <span class="status-pill">Selecionado</span>
+                </div>
+                <p class="agent-description">{{ agent_description }}</p>
+            </section>
 
-    <pre id="resposta"></pre>
+            <section class="sidebar-section">
+                <p class="section-title">Atalhos</p>
+                <div class="quick-actions">
+                    <button class="quick-action" type="button" data-prompt="Crie um card no Trello para a tarefa de hoje: revisar pedidos pendentes.">Criar card no Trello</button>
+                    <button class="quick-action" type="button" data-prompt="Liste todas as tarefas em andamento.">Listar tarefas</button>
+                    <button class="quick-action" type="button" data-prompt="Mude a tarefa 'Revisar pedidos' para desenvolvimento.">Alterar status</button>
+                </div>
+            </section>
+
+            <div class="sidebar-footer">
+                <span class="muted">Fluxo pronto para uso no navegador</span>
+                <span class="muted">O agente já abre selecionado como principal.</span>
+            </div>
+        </aside>
+
+        <section class="chat-panel" aria-label="Chat com agente">
+            <header class="chat-header">
+                <p class="section-title">Chat</p>
+                <h2 class="panel-title">Converse com o agente</h2>
+                <p class="panel-copy">Envie um prompt, receba a resposta e mantenha a experiência visual próxima do ADK Web.</p>
+            </header>
+
+            <div id="chatLog" class="chat-log" aria-live="polite">
+                <div class="message system">O agente principal já está selecionado. Escreva sua solicitação abaixo.</div>
+            </div>
+
+            <form id="chatForm" class="composer">
+                <div class="composer-inner">
+                    <textarea id="mensagem" placeholder="Digite seu prompt para o agente..." rows="2"></textarea>
+                    <button id="sendButton" class="send-button" type="submit">Enviar</button>
+                </div>
+                <div class="helper-row">
+                    <span>Enter envia, Shift+Enter quebra linha.</span>
+                    <span id="statusText" class="typing" hidden>
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                        <span class="typing-dot"></span>
+                        Processando resposta
+                    </span>
+                </div>
+            </form>
+        </section>
+    </main>
 
     <script>
-        async function enviar() {
-            const mensagem = document.getElementById("mensagem").value;
+        const chatLog = document.getElementById("chatLog");
+        const chatForm = document.getElementById("chatForm");
+        const mensagemInput = document.getElementById("mensagem");
+        const sendButton = document.getElementById("sendButton");
+        const statusText = document.getElementById("statusText");
 
-            const response = await fetch("/chat", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    mensagem: mensagem
-                })
-            });
+        function appendMessage(role, content, meta = "") {
+            const message = document.createElement("div");
+            message.className = `message ${role}`;
 
-            const data = await response.json();
+            if (meta) {
+                const metaEl = document.createElement("span");
+                metaEl.className = "assistant-meta";
+                metaEl.textContent = meta;
+                message.appendChild(metaEl);
+            }
 
-            document.getElementById("resposta").innerText =
-                JSON.stringify(data, null, 2);
+            const body = document.createElement("div");
+            body.textContent = content;
+            message.appendChild(body);
+
+            chatLog.appendChild(message);
+            chatLog.scrollTop = chatLog.scrollHeight;
         }
+
+        function setLoading(isLoading) {
+            sendButton.disabled = isLoading;
+            statusText.hidden = !isLoading;
+        }
+
+        async function enviarMensagem(mensagem) {
+            if (!mensagem.trim()) {
+                return;
+            }
+
+            appendMessage("user", mensagem);
+            mensagemInput.value = "";
+            setLoading(true);
+
+            try {
+                const response = await fetch("/chat", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ mensagem })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || data.resposta || "Falha ao processar o pedido.");
+                }
+
+                appendMessage("assistant", data.resposta || "Sem resposta do agente.", data.agent ? `Agente: ${data.agent}` : "Agente: principal");
+            } catch (error) {
+                appendMessage("assistant", error.message, "Erro");
+            } finally {
+                setLoading(false);
+                mensagemInput.focus();
+            }
+        }
+
+        chatForm.addEventListener("submit", (event) => {
+            event.preventDefault();
+            enviarMensagem(mensagemInput.value);
+        });
+
+        mensagemInput.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                chatForm.requestSubmit();
+            }
+        });
+
+        document.querySelectorAll("[data-prompt]").forEach((button) => {
+            button.addEventListener("click", () => {
+                mensagemInput.value = button.dataset.prompt || "";
+                mensagemInput.focus();
+            });
+        });
     </script>
 </body>
 </html>

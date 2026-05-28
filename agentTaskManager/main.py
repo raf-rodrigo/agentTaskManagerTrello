@@ -8,6 +8,24 @@ app = FastAPI()
 
 templates = Jinja2Templates(directory="agentTaskManager/templates")
 
+AGENT_DISPLAY_NAME = "Agente principal"
+AGENT_DESCRIPTION = getattr(root_agent, "description", "")
+
+
+def formatar_resposta(resultado):
+    for atributo in ("text", "output_text", "content", "message", "response"):
+        valor = getattr(resultado, atributo, None)
+        if valor:
+            return str(valor)
+
+    if isinstance(resultado, dict):
+        for chave in ("text", "output_text", "content", "message", "response"):
+            valor = resultado.get(chave)
+            if valor:
+                return str(valor)
+
+    return str(resultado)
+
 
 class ChatRequest(BaseModel):
     mensagem: str
@@ -17,7 +35,11 @@ class ChatRequest(BaseModel):
 def home(request: Request):
     return templates.TemplateResponse(
         "index.html",
-        {"request": request}
+        {
+            "request": request,
+            "agent_name": AGENT_DISPLAY_NAME,
+            "agent_description": AGENT_DESCRIPTION,
+        }
     )
 
 
@@ -26,5 +48,6 @@ def chat(data: ChatRequest):
     resposta = root_agent.run(data.mensagem)
 
     return {
-        "resposta": str(resposta)
+        "resposta": formatar_resposta(resposta),
+        "agent": AGENT_DISPLAY_NAME,
     }
