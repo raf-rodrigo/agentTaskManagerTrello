@@ -2,7 +2,10 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+from google.adk.runners import InMemoryRunner
+from google.genai import types
 import logging
+import uuid
 
 from agentTaskManager.agent import root_agent
 
@@ -10,6 +13,7 @@ app = FastAPI()
 
 templates = Jinja2Templates(directory="agentTaskManager/templates")
 logger = logging.getLogger(__name__)
+runner = InMemoryRunner(agent=root_agent)
 
 AGENT_DISPLAY_NAME = "Agente principal"
 AGENT_DESCRIPTION = getattr(root_agent, "description", "")
@@ -32,6 +36,7 @@ def formatar_resposta(resultado):
 
 class ChatRequest(BaseModel):
     mensagem: str
+    session_id: str | None = None
 
 
 @app.get("/")
@@ -46,14 +51,35 @@ def home(request: Request):
     )
 
 
+def extrair_texto_evento(evento):
+    if not evento or not evento.message or not evento.message.parts:
+        return ""
+
+    partes_texto = [parte.text for parte in evento.message.parts if getattr(parte, "text", None)]
+    return "\n".join(partes_texto).strip()
+
+
 @app.post("/chat")
-def chat(data: ChatRequest):
+async def chat(data: ChatRequest):
     try:
-        resposta = root_agent.run(data.mensagem)
+        session_id = data.session_id or str(uuid.uuid4())
+        mensagem = types.Content(parts=[types.Part(text=data.mensagem)])
+        resposta_final = ""
+
+        async for event in runner.run_async(
+            user_id="web-user",
+            session_id=session_id,
+            new_message=mensagem,
+        ):
+            if event.is_final_response():
+                texto_evento = extrair_texto_evento(event)
+                if texto_evento:
+                    resposta_final = texto_evento
 
         return {
-            "resposta": formatar_resposta(resposta),
+            "resposta": resposta_final or "Sem resposta do agente.",
             "agent": AGENT_DISPLAY_NAME,
+            "session_id": session_id,
         }
     except Exception as exc:
         logger.exception("Erro ao processar mensagem do chat")

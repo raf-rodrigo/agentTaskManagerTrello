@@ -505,6 +505,18 @@
         const mensagemInput = document.getElementById("mensagem");
         const sendButton = document.getElementById("sendButton");
         const statusText = document.getElementById("statusText");
+        const sessionStorageKey = "agent-task-manager-session-id";
+
+        function getSessionId() {
+            let sessionId = localStorage.getItem(sessionStorageKey);
+
+            if (!sessionId) {
+                sessionId = crypto.randomUUID();
+                localStorage.setItem(sessionStorageKey, sessionId);
+            }
+
+            return sessionId;
+        }
 
         function appendMessage(role, content, meta = "") {
             const message = document.createElement("div");
@@ -545,7 +557,10 @@
                     headers: {
                         "Content-Type": "application/json"
                     },
-                    body: JSON.stringify({ mensagem })
+                    body: JSON.stringify({
+                        mensagem,
+                        session_id: getSessionId()
+                    })
                 });
 
                 const contentType = response.headers.get("content-type") || "";
