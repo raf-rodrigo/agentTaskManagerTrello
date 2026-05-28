@@ -1,12 +1,15 @@
 from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+import logging
 
 from agentTaskManager.agent import root_agent
 
 app = FastAPI()
 
 templates = Jinja2Templates(directory="agentTaskManager/templates")
+logger = logging.getLogger(__name__)
 
 AGENT_DISPLAY_NAME = "Agente principal"
 AGENT_DESCRIPTION = getattr(root_agent, "description", "")
@@ -45,9 +48,20 @@ def home(request: Request):
 
 @app.post("/chat")
 def chat(data: ChatRequest):
-    resposta = root_agent.run(data.mensagem)
+    try:
+        resposta = root_agent.run(data.mensagem)
 
-    return {
-        "resposta": formatar_resposta(resposta),
-        "agent": AGENT_DISPLAY_NAME,
-    }
+        return {
+            "resposta": formatar_resposta(resposta),
+            "agent": AGENT_DISPLAY_NAME,
+        }
+    except Exception as exc:
+        logger.exception("Erro ao processar mensagem do chat")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": "Erro ao processar a solicitação do agente.",
+                "error": str(exc),
+                "agent": AGENT_DISPLAY_NAME,
+            },
+        )

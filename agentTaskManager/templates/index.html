@@ -548,7 +548,11 @@
                     body: JSON.stringify({ mensagem })
                 });
 
-                const data = await response.json();
+                const contentType = response.headers.get("content-type") || "";
+                const rawBody = await response.text();
+                const data = contentType.includes("application/json")
+                    ? JSON.parse(rawBody)
+                    : { detail: rawBody };
 
                 if (!response.ok) {
                     throw new Error(data.detail || data.resposta || "Falha ao processar o pedido.");
