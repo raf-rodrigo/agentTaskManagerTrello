@@ -555,7 +555,11 @@
                     : { detail: rawBody };
 
                 if (!response.ok) {
-                    throw new Error(data.detail || data.resposta || "Falha ao processar o pedido.");
+                    const mensagemErro = data.error
+                        ? `${data.detail || "Falha ao processar o pedido."}\n${data.error}`
+                        : (data.detail || data.resposta || "Falha ao processar o pedido.");
+
+                    throw new Error(mensagemErro);
                 }
 
                 appendMessage("assistant", data.resposta || "Sem resposta do agente.", data.agent ? `Agente: ${data.agent}` : "Agente: principal");
