@@ -1,11 +1,13 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 from google.adk.runners import InMemoryRunner
 from google.genai import types
 import logging
 import uuid
+import os
 
 from agentTaskManager.agent import root_agent
 
@@ -14,6 +16,25 @@ app = FastAPI()
 templates = Jinja2Templates(directory="agentTaskManager/templates")
 logger = logging.getLogger(__name__)
 runner = InMemoryRunner(agent=root_agent)
+
+security = HTTPBasic()
+
+def verificar_credenciais(credentials: HTTPBasicCredentials = Depends(security)):
+    user_esperado = os.getenv("AGENT_USER", "admin")
+    pass_esperada = os.getenv("AGENT_PASSWORD")
+    
+    # Se a senha não estiver configurada no ambiente (ex: desenvolvimento local), libera o acesso
+    if not pass_esperada:
+        return credentials.username
+        
+    if credentials.username == user_esperado and credentials.password == pass_esperada:
+        return credentials.username
+        
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Acesso negado. Usuário ou senha incorretos.",
+        headers={"WWW-Authenticate": "Basic"},
+    )
 
 AGENT_DISPLAY_NAME = "Agente principal"
 AGENT_DESCRIPTION = getattr(root_agent, "description", "")
@@ -40,7 +61,7 @@ class ChatRequest(BaseModel):
 
 
 @app.get("/")
-def home(request: Request):
+def home(request: Request, username: str = Depends(verificar_credenciais)):
     return templates.TemplateResponse(
         "index.html",
         {
@@ -60,7 +81,7 @@ def extrair_texto_evento(evento):
 
 
 @app.post("/chat")
-async def chat(data: ChatRequest):
+async def chat(data: ChatRequest, username: str = Depends(verificar_credenciais)):
     try:
         session_id = data.session_id or str(uuid.uuid4())
         mensagem = types.Content(parts=[types.Part(text=data.mensagem)])
