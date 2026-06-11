@@ -103,15 +103,31 @@ async def chat(data: ChatRequest, username: str = Depends(verificar_credenciais)
         mensagem = types.Content(parts=[types.Part(text=data.mensagem)])
         resposta_final = ""
 
-        async for event in runner.run_async(
-            user_id="web-user",
-            session_id=session_id,
-            new_message=mensagem,
-        ):
-            if event.is_final_response():
-                texto_evento = extrair_texto_evento(event)
-                if texto_evento:
-                    resposta_final = texto_evento
+        try:
+            async for event in runner.run_async(
+                user_id="web-user",
+                session_id=session_id,
+                new_message=mensagem,
+            ):
+                if event.is_final_response():
+                    texto_evento = extrair_texto_evento(event)
+                    if texto_evento:
+                        resposta_final = texto_evento
+        except Exception as runner_exc:
+            # Se o erro for de sessão não encontrada (comum no Cloud Run por ser stateless), criamos uma nova sessão transparentemente
+            if "session not found" in str(runner_exc).lower():
+                session_id = str(uuid.uuid4())
+                async for event in runner.run_async(
+                    user_id="web-user",
+                    session_id=session_id,
+                    new_message=mensagem,
+                ):
+                    if event.is_final_response():
+                        texto_evento = extrair_texto_evento(event)
+                        if texto_evento:
+                            resposta_final = texto_evento
+            else:
+                raise runner_exc
 
         return {
             "resposta": resposta_final or "Sem resposta do agente.",

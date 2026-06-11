@@ -577,6 +577,11 @@
                     throw new Error(mensagemErro);
                 }
 
+                // Atualizar o Session ID caso o servidor tenha gerado um novo (ex: expiração de container)
+                if (data.session_id) {
+                    localStorage.setItem(sessionStorageKey, data.session_id);
+                }
+
                 appendMessage("assistant", data.resposta || "Sem resposta do agente.", data.agent ? `Agente: ${data.agent}` : "Agente: principal");
             } catch (error) {
                 appendMessage("assistant", error.message, "Erro");
