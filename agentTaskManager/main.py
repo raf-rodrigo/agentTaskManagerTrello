@@ -79,9 +79,9 @@ class ChatRequest(BaseModel):
 @app.get("/")
 def home(request: Request, username: str = Depends(verificar_credenciais)):
     return templates.TemplateResponse(
-        "index.html",
-        {
-            "request": request,
+        request=request,
+        name="index.html",
+        context={
             "agent_name": AGENT_DISPLAY_NAME,
             "agent_description": AGENT_DESCRIPTION,
         }
